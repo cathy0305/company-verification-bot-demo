@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Environment / secrets
+.env
+.env.*
+*.local
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build output
+dist/
+build/
+*.egg-info/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Data / credentials (검증 작업용 민감 데이터)
+*.key
+*.pem
+credentials.json
+secrets.json
+
+# 예시 환경변수 파일은 공개
+!.env.example

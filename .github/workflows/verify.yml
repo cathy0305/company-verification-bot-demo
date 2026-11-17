@@ -1,0 +1,55 @@
+name: verify-companies
+
+on:
+  # 운영 버전은 10분 간격 cron 으로 폴링했다. 공개용 데모에서는 자동 실행을 끄고 수동 실행만 남긴다.
+  # schedule:
+  #   - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+# 동시 실행 방지 — 단일 잡으로 충분 (스펙 4-2)
+concurrency:
+  group: verify-companies
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # 상태 파일(last_ts) 커밋/푸시용
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Run verifier
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_SOURCE_CHANNEL: ${{ secrets.SLACK_SOURCE_CHANNEL }}
+          SLACK_SOURCE_APP_ID: ${{ secrets.SLACK_SOURCE_APP_ID }}
+          OPENCORPORATES_API_KEY: ${{ secrets.OPENCORPORATES_API_KEY }}
+          WHOIS_API_KEY: ${{ secrets.WHOIS_API_KEY }}
+          SEARCH_API_KEY: ${{ secrets.SEARCH_API_KEY }}
+          SEARCH_PROVIDER: serper
+          ENNOIA_BASE_URL: ${{ secrets.ENNOIA_BASE_URL }}
+          ENNOIA_PROJECT: ${{ secrets.ENNOIA_PROJECT }}
+          ENNOIA_API_KEY: ${{ secrets.ENNOIA_API_KEY }}
+          ENNOIA_HASH: ${{ secrets.ENNOIA_HASH }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GDRIVE_SA_JSON: ${{ secrets.GDRIVE_SA_JSON }}
+        run: python -m src.main
+
+      # 마지막 ts 영속화: 상태 파일을 커밋 (스펙 4-2 옵션 ①)
+      - name: Persist state
+        if: success()
+        run: |
+          git config user.name "verify-bot"
+          git config user.email "verify-bot@users.noreply.github.com"
+          git add -f .state/last_ts.json || true
+          git diff --cached --quiet || git commit -m "chore: update last_ts [skip ci]"
+          git push || true
